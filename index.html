@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>НОЧНЫЕ ЧАСЫ</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Cinzel:wght@600;900&family=Courier+Prime:wght@700&family=Fira+Code:wght@600&family=Inter:wght@400;700;900&family=Montserrat:wght@400;800;900&family=Orbitron:wght@600;900&family=Playfair+Display:ital,wght@0,700;1,400&family=Roboto+Mono:wght@700&family=Roboto:wght@300;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #050508;
+            --clock-scale: 1;
+            --brightness: 1;
+            --digital-color: #00f0ff;
+            --digital-font: 'Orbitron', sans-serif;
+            --analog-color: #00f0ff;
+            --analog-font: 'Inter', sans-serif;
+            --date-color: #a0a5b5;
+            --date-font: 'Inter', sans-serif;
+            --date-size: 1.2rem;
+            --shift-x: 0px;
+            --shift-y: 0px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+        }
+
+        /* Экран-контейнер с возможностью поворота */
+        #screen-container {
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            filter: brightness(var(--brightness));
+            transition: filter 0.1s ease, transform 0.4s ease, width 0.4s ease, height 0.4s ease;
+            transform-origin: center center;
+        }
+
+        /* Альбомный режим принудительно */
+        #screen-container.rotated-landscape {
+            width: 100vh;
+            height: 100vw;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(90deg);
+        }
+
+        /* Область часов */
+        #clock-wrapper {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .clock-layout-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 95vw;
+            max-height: 75vh;
+            transform: translate(var(--shift-x), var(--shift-y)) scale(var(--clock-scale));
+            transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Позиционирование даты */
+        .layout-top { flex-direction: column; }
+        .layout-bottom { flex-direction: column-reverse; }
+        .layout-left { flex-direction: row; }
+        .layout-right { flex-direction: row-reverse; }
+        .layout-none .date-element { display: none !important; }
+
+        /* Дата */
+        .date-element {
+            font-family: var(--date-font);
+            color: var(--date-color);
+            font-size: var(--date-size);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            margin: 15px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* === ЦИФРОВЫЕ ЧАСЫ (ОСНОВНОЙ БЛОК) === */
+        .digital-clock-element {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--digital-font);
+            color: var(--digital-color);
+            transition: color 0.3s ease, font-family 0.3s ease;
+        }
+
+        /* Style 1: Neon LED */
+        .digi-style-1 {
+            font-size: 5.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 25px currentColor, 0 0 5px currentColor;
+            letter-spacing: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Style 2: Blocks */
+        .digi-style-2 {
+            font-size: 4.8rem;
+            gap: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .digi-style-2 .time-block {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid currentColor;
+            padding: 8px 16px;
+            border-radius: 12px;
+            min-width: 2.2ch;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5), inset 0 0 15px currentColor;
+        }
+
+        /* Style 3: Gradient Modern */
+        .digi-style-3 {
+            font-size: 6rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            background: linear-gradient(180deg, #ffffff 0%, var(--digital-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 18px var(--digital-color));
+        }
+
+        /* Style 4: Retro 7-Segment LCD */
+        .digi-style-4 {
+            font-size: 5.5rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            font-variant-numeric: tabular-nums;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0 12px currentColor;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+        }
+
+        /* Style 5: Cyberpunk Sharp Shadow */
+        .digi-style-5 {
+            font-size: 5.5rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 4px 4px 0px #ff0055, -4px -4px 0px #00ffff;
+            font-style: italic;
+        }
+
+        /* Style 6: Elegant Serif */
+        .digi-style-6 {
+            font-size: 5.8rem;
+            font-weight: 400;
+            font-family: 'Playfair Display', serif !important;
+            letter-spacing: 6px;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Style 7: 3D Depth Shadow */
+        .digi-style-7 {
+            font-size: 5.5rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 
+                1px 1px 0px currentColor,
+                2px 2px 0px rgba(0,0,0,0.8),
+                3px 3px 0px rgba(0,0,0,0.8),
+                4px 4px 0px rgba(0,0,0,0.8),
+                5px 5px 15px rgba(0,0,0,0.9);
+        }
+
+        /* ========================================================
+           3D FLIP CLOCK STYLES (Style 8 & Style 9)
+           ======================================================== */
+        .flip-clock-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .flip-unit-pair {
+            display: flex;
+            gap: 4px;
+        }
+
+        .flip-dots {
+            font-size: 3.5rem;
+            font-weight: bold;
+            opacity: 0.8;
+            margin: 0 4px;
+            align-self: center;
+        }
+
+        /* Карточка перекидных часов */
+        .flip-card-3d {
+            position: relative;
+            width: 75px;
+            height: 110px;
+            perspective: 400px;
+            font-family: var(--digital-font);
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.8);
+        }
+
+        .flip-card-3d .card-half {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50%;
+            overflow: hidden;
+            background: #181a24;
+            color: var(--digital-color);
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+            border-left: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .flip-card-3d .card-top {
+            top: 0;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px 8px 0 0;
+            line-height: 110px;
+        }
+
+        .flip-card-3d .card-bottom {
+            bottom: 0;
+            border-bottom: 1px solid rgba(0,0,0,0.5);
+            border-radius: 0 0 8px 8px;
+            line-height: 0px;
+        }
+
+        /* Разделительная линия посредине */
+        .flip-card-3d::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(0,0,0,0.7);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+
+        /* Анимированные перекидные элементы */
+        .flip-card-3d .leaf {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50%;
+            overflow: hidden;
+            background: #181a24;
+            color: var(--digital-color);
+            text-align: center;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+            z-index: 4;
+            width: 100%;
+        }
+
+        .flip-card-3d .leaf-top {
+            top: 0;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px 8px 0 0;
+            line-height: 110px;
+            transform-origin: bottom center;
+        }
+
+        .flip-card-3d .leaf-bottom {
+            bottom: 0;
+            border-bottom: 1px solid rgba(0,0,0,0.5);
+            border-radius: 0 0 8px 8px;
+            line-height: 0px;
+            transform-origin: top center;
+            transform: rotateX(90deg);
+        }
+
+        /* Анимация переворота */
+        .flip-card-3d.flipping .leaf-top {
+            animation: flipDownTop 0.25s ease-in forwards;
+        }
+        .flip-card-3d.flipping .leaf-bottom {
+            animation: flipDownBottom 0.25s 0.25s ease-out forwards;
+        }
+
+        @keyframes flipDownTop {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-90deg); }
+        }
+        @keyframes flipDownBottom {
+            0% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        /* Style 8: Mechanical Dark Flip */
+        .digi-style-8 .flip-card-3d .card-half,
+        .digi-style-8 .flip-card-3d .leaf {
+            background: #14161f;
+            font-size: 4.8rem;
+            font-weight: 800;
+        }
+
+        /* Style 9: Modern Minimalist Flip */
+        .digi-style-9 .flip-card-3d {
+            width: 72px;
+            height: 104px;
+        }
+        .digi-style-9 .flip-card-3d .card-half,
+        .digi-style-9 .flip-card-3d .leaf {
+            background: linear-gradient(180deg, #282b3a 0%, #11131c 100%);
+            color: #ffffff;
+            font-size: 4.5rem;
+            font-weight: 900;
+        }
+        .digi-style-9 .flip-card-3d .card-top,
+        .digi-style-9 .flip-card-3d .leaf-top {
+            color: var(--digital-color);
+        }
+
+        /* === АНАЛОГОВЫЕ ЧАСЫ === */
+        .analog-clock-element {
+            width: 320px;
+            height: 320px;
+            display: none;
+        }
+
+        /* Панель управления */
+        #controls-bar {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(180deg, transparent, rgba(0,0,0,0.85));
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #8a8d9b;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .control-group input[type="range"] {
+            -webkit-appearance: none;
+            width: 110px;
+            height: 6px;
+            border-radius: 3px;
+            background: #2a2d3d;
+            outline: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00f0ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        .btn-ctrl {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-ctrl:hover {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: #00f0ff;
+            color: #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-ctrl:active { transform: scale(0.96); }
+
+        /* Водяной Знак БЛiК */
+        #watermark-blik {
+            position: absolute;
+            bottom: 12px;
+            right: 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.22);
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 20;
+            text-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Индикатор защиты от выгорания */
+        #burnin-indicator {
+            position: absolute;
+            top: 12px;
+            left: 15px;
+            font-size: 0.7rem;
+            color: rgba(0, 240, 255, 0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            z-index: 20;
+        }
+        #burnin-indicator .dot {
+            width: 6px;
+            height: 6px;
+            background: #00f0ff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00f0ff;
+            animation: pulseDot 2s infinite;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Модальное окно настроек */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-window {
+            background: #12141d;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            width: 95%;
+            max-width: 680px;
+            max-height: 90vh;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #00f0ff;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #777;
+            font-size: 1.6rem;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #fff; }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        /* Пример (Preview) */
+        .preview-wrapper {
+            background: #050508;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 190px;
+            position: relative;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.9);
+            overflow: hidden;
+        }
+
+        .preview-wrapper::before {
+            content: "ПРИМЕР В РЕАЛЬНОМ ВРЕМЕНИ";
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.35);
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .preview-container {
+            transform: scale(0.6);
+            transform-origin: center center;
+        }
+
+        .preview-container .digi-style-1 { font-size: 3.2rem; }
+        .preview-container .digi-style-2 { font-size: 2.8rem; }
+        .preview-container .digi-style-3 { font-size: 3.5rem; }
+        .preview-container .digi-style-4 { font-size: 3.2rem; }
+        .preview-container .digi-style-5 { font-size: 3.2rem; }
+        .preview-container .digi-style-6 { font-size: 3.5rem; }
+        .preview-container .digi-style-7 { font-size: 3.2rem; }
+        .preview-container .flip-card-3d { width: 45px; height: 65px; }
+        .preview-container .flip-card-3d .card-top, 
+        .preview-container .flip-card-3d .leaf-top { line-height: 65px; }
+        .preview-container .flip-card-3d .card-half, 
+        .preview-container .flip-card-3d .leaf { font-size: 2.8rem; }
+        .preview-container .analog-clock-element { width: 170px; height: 170px; }
+
+        .settings-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .settings-section h3 {
+            font-size: 0.92rem;
+            color: #e0e0e0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .setting-row:last-child { margin-bottom: 0; }
+
+        .setting-row label {
+            font-size: 0.85rem;
+            color: #9a9daf;
+        }
+
+        select, input[type="color"] {
+            background: #1c1f2e;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        input[type="color"] {
+            width: 45px;
+            height: 35px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .clock-type-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #1c1f2e;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #aaa;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: #00f0ff;
+            color: #000;
+            border-color: #00f0ff;
+        }
+    </style>
+</head>
+<body>
+
+<div id="screen-container">
+
+    <!-- Индикатор защиты от выгорания -->
+    <div id="burnin-indicator">
+        <div class="dot"></div>
+        <span>Защита от выгорания активна</span>
+    </div>
+    
+    <!-- Центральный блок главных часов -->
+    <div id="clock-wrapper">
+        <div id="clock-container" class="clock-layout-box layout-bottom">
+            <!-- Цифровые часы -->
+            <div id="digital-clock" class="digital-clock-element digi-style-1"></div>
+            
+            <!-- Аналоговые часы (SVG) -->
+            <div id="analog-clock" class="analog-clock-element">
+                <svg class="analog-svg" viewBox="0 0 200 200" width="100%" height="100%"></svg>
+            </div>
+
+            <!-- Дата -->
+            <div id="date-display" class="date-element">Понедельник, 1 января</div>
+        </div>
+    </div>
+
+    <!-- Водяной знак БЛiК -->
+    <div id="watermark-blik">БЛiК</div>
+
+    <!-- Нижняя панель управления -->
+    <div id="controls-bar">
+        <div class="control-group">
+            <label for="scale-slider">Размер</label>
+            <input type="range" id="scale-slider" min="0.5" max="2" step="0.05" value="1">
+        </div>
+
+        <div class="control-group">
+            <label for="bright-slider">Яркость</label>
+            <input type="range" id="bright-slider" min="0.1" max="1" step="0.05" value="1">
+        </div>
+
+        <button class="btn-ctrl" id="btn-orientation">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm2 1v8h10V4H3z"/>
+            </svg>
+            <span id="orient-label">Ориентация: Книжная</span>
+        </button>
+
+        <button class="btn-ctrl" id="btn-settings">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+            </svg>
+            Настройки
+        </button>
+    </div>
+</div>
+
+<!-- Модальное окно настроек -->
+<div class="modal-backdrop" id="settings-modal">
+    <div class="modal-window">
+        <div class="modal-header">
+            <h2>Настройки часов</h2>
+            <button class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            
+            <!-- Интерактивный Пример (Preview) -->
+            <div class="preview-wrapper">
+                <div id="preview-clock-container" class="clock-layout-box preview-container layout-bottom">
+                    <div id="preview-digital-clock" class="digital-clock-element digi-style-1"></div>
+                    <div id="preview-analog-clock" class="analog-clock-element">
+                        <svg class="analog-svg" viewBox="0 0 200 200" width="100%" height="100%"></svg>
+                    </div>
+                    <div id="preview-date-display" class="date-element">Понедельник, 1 января</div>
+                </div>
+            </div>
+
+            <!-- Переключение типа часов -->
+            <div class="clock-type-tabs">
+                <button class="tab-btn active" id="tab-digital">Цифровые часы</button>
+                <button class="tab-btn" id="tab-analog">Аналоговые часы</button>
+            </div>
+
+            <!-- 1. Настройки Цифровых Часов -->
+            <div class="settings-section" id="section-digital">
+                <h3>Цифровые часы</h3>
+                <div class="setting-row">
+                    <label>Стиль часов</label>
+                    <select id="digi-style-select">
+                        <option value="1">1. Неоновый LED классический</option>
+                        <option value="2">2. Минимализм с блоками</option>
+                        <option value="3">3. Современный градиент</option>
+                        <option value="4">4. Ретро 7-сегментный LCD</option>
+                        <option value="5">5. Киберпанк с тенью</option>
+                        <option value="6">6. Элегантная классика (Serif)</option>
+                        <option value="7">7. Теневой 3D-эффект</option>
+                        <option value="8">8. Флип-часы Механика (Flip Card)</option>
+                        <option value="9">9. Флип-часы Модерн / Акцент</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Шрифт</label>
+                    <select id="digi-font-select">
+                        <option value="'Orbitron', sans-serif">Orbitron (Футуристичный)</option>
+                        <option value="'Chakra Petch', sans-serif">Chakra Petch (Техно)</option>
+                        <option value="'VT323', monospace">VT323 (Ретро LCD)</option>
+                        <option value="'Share Tech Mono', monospace">Share Tech Mono</option>
+                        <option value="'Roboto Mono', monospace">Roboto Mono</option>
+                        <option value="'Fira Code', monospace">Fira Code</option>
+                        <option value="'Courier Prime', monospace">Courier Prime</option>
+                        <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
+                        <option value="'Cinzel', serif">Cinzel (Античный)</option>
+                        <option value="'Inter', sans-serif">Inter (Строгий)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Цвет часов</label>
+                    <input type="color" id="digi-color-picker" value="#00f0ff">
+                </div>
+            </div>
+
+            <!-- 2. Настройки Аналоговых Часов -->
+            <div class="settings-section" id="section-analog" style="display: none;">
+                <h3>Аналоговые часы</h3>
+                <div class="setting-row">
+                    <label>Вид циферблата</label>
+                    <select id="analog-style-select">
+                        <option value="1">1. Классический (с цифрами)</option>
+                        <option value="2">2. Минимализм (засечки)</option>
+                        <option value="3">3. Спорт / Футуризм</option>
+                        <option value="4">4. Хронограф (с субциферблатами)</option>
+                        <option value="5">5. Винтаж / Арт-Деко (Римские I-XII)</option>
+                        <option value="6">6. Неоновый сетчатый (Glow grid)</option>
+                        <option value="7">7. Штурвальный / Авиационный</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Шрифт циферблата</label>
+                    <select id="analog-font-select">
+                        <option value="'Inter', sans-serif">Inter</option>
+                        <option value="'Orbitron', sans-serif">Orbitron</option>
+                        <option value="'Cinzel', serif">Cinzel (Римский)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                        <option value="'Courier Prime', monospace">Courier Prime</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Основной цвет</label>
+                    <input type="color" id="analog-color-picker" value="#00f0ff">
+                </div>
+            </div>
+
+            <!-- 3. Настройка Защиты от выгорания экрана -->
+            <div class="settings-section">
+                <h3>Защита от выгорания (OLED Shift)</h3>
+                <div class="setting-row">
+                    <label>Интервал смещения</label>
+                    <select id="burnin-interval-select">
+                        <option value="off">Выключено</option>
+                        <option value="1">Каждую 1 минуту</option>
+                        <option value="5" selected>Каждые 5 минут</option>
+                        <option value="10">Каждые 10 минут</option>
+                        <option value="continuous">Плавное непрерывное плавание</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Режим перемещения</label>
+                    <select id="burnin-mode-select">
+                        <option value="orbit">Орбита / Плавное плавание</option>
+                        <option value="random" selected>Случайный сдвиг</option>
+                        <option value="cross">Крест / По углам</option>
+                        <option value="pixel">Пиксельный сдвиг (Pixel Jitter)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 4. Настройка Даты -->
+            <div class="settings-section">
+                <h3>Настройка даты</h3>
+                <div class="setting-row">
+                    <label>Расположение относительно часов</label>
+                    <select id="date-pos-select">
+                        <option value="bottom">Снизу</option>
+                        <option value="top">Сверху</option>
+                        <option value="left">Слева</option>
+                        <option value="right">Справа</option>
+                        <option value="none">Скрыть дату</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Шрифт даты</label>
+                    <select id="date-font-select">
+                        <option value="'Inter', sans-serif">Inter</option>
+                        <option value="'Roboto', sans-serif">Roboto</option>
+                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                        <option value="'Share Tech Mono', monospace">Share Tech Mono</option>
+                        <option value="'Cinzel', serif">Cinzel</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Размер текста</label>
+                    <select id="date-size-select">
+                        <option value="0.9rem">Маленький</option>
+                        <option value="1.2rem" selected>Средний</option>
+                        <option value="1.6rem">Большой</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Цвет даты</label>
+                    <input type="color" id="date-color-picker" value="#a0a5b5">
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // === СОСТОЯНИЕ ПРИЛОЖЕНИЯ ===
+    const state = {
+        mode: 'digital',
+        isLandscape: false,
+        scale: 1,
+        brightness: 1,
+        digital: {
+            style: '1',
+            font: "'Orbitron', sans-serif",
+            color: '#00f0ff'
+        },
+        analog: {
+            style: '1',
+            font: "'Inter', sans-serif",
+            color: '#00f0ff'
+        },
+        date: {
+            position: 'bottom',
+            font: "'Inter', sans-serif",
+            size: '1.2rem',
+            color: '#a0a5b5'
+        },
+        burnin: {
+            interval: '5', // 'off', '1', '5', '10', 'continuous'
+            mode: 'random' // 'orbit', 'random', 'cross', 'pixel'
+        }
+    };
+
+    // DOM Элементы
+    const screenContainer = document.getElementById('screen-container');
+    const clockContainer = document.getElementById('clock-container');
+    const digitalClock = document.getElementById('digital-clock');
+    const analogClock = document.getElementById('analog-clock');
+    const dateDisplay = document.getElementById('date-display');
+    const mainAnalogSvg = clockContainer.querySelector('.analog-svg');
+    const burninIndicator = document.getElementById('burnin-indicator');
+
+    // DOM Preview Элементы
+    const previewClockContainer = document.getElementById('preview-clock-container');
+    const previewDigitalClock = document.getElementById('preview-digital-clock');
+    const previewAnalogClock = document.getElementById('preview-analog-clock');
+    const previewDateDisplay = document.getElementById('preview-date-display');
+    const previewAnalogSvg = previewClockContainer.querySelector('.analog-svg');
+
+    // Controls
+    const scaleSlider = document.getElementById('scale-slider');
+    const brightSlider = document.getElementById('bright-slider');
+    const btnOrientation = document.getElementById('btn-orientation');
+    const orientLabel = document.getElementById('orient-label');
+
+    const btnSettings = document.getElementById('btn-settings');
+    const modal = document.getElementById('settings-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+
+    const tabDigital = document.getElementById('tab-digital');
+    const tabAnalog = document.getElementById('tab-analog');
+    const sectionDigital = document.getElementById('section-digital');
+    const sectionAnalog = document.getElementById('section-analog');
+
+    // Хранение предыдущих значений времени для флип-анимации
+    let prevTimeStr = '';
+
+    // === СОЗДАНИЕ 3D ФЛИП КАРТОЧКИ ===
+    function createFlipCardHTML(idPrefix, initialVal) {
+        return `
+            <div class="flip-card-3d" id="${idPrefix}">
+                <div class="card-half card-top">${initialVal}</div>
+                <div class="card-half card-bottom">${initialVal}</div>
+                <div class="leaf leaf-top">${initialVal}</div>
+                <div class="leaf leaf-bottom">${initialVal}</div>
+            </div>
+        `;
+    }
+
+    function initFlipClockStructure(container, isPreview = false) {
+        const p = isPreview ? 'prev-' : 'main-';
+        container.innerHTML = `
+            <div class="flip-clock-group">
+                <div class="flip-unit-pair">
+                    ${createFlipCardHTML(p + 'h1', '0')}
+                    ${createFlipCardHTML(p + 'h2', '0')}
+                </div>
+                <div class="flip-dots">:</div>
+                <div class="flip-unit-pair">
+                    ${createFlipCardHTML(p + 'm1', '0')}
+                    ${createFlipCardHTML(p + 'm2', '0')}
+                </div>
+                <div class="flip-dots">:</div>
+                <div class="flip-unit-pair">
+                    ${createFlipCardHTML(p + 's1', '0')}
+                    ${createFlipCardHTML(p + 's2', '0')}
+                </div>
+            </div>
+        `;
+    }
+
+    function updateSingleFlipCard(cardId, newVal) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+
+        const cardTop = card.querySelector('.card-top');
+        const cardBottom = card.querySelector('.card-bottom');
+        const leafTop = card.querySelector('.leaf-top');
+        const leafBottom = card.querySelector('.leaf-bottom');
+
+        if (cardTop.textContent === newVal) return;
+
+        // Запуск анимации
+        leafTop.textContent = cardTop.textContent;
+        leafBottom.textContent = newVal;
+        cardTop.textContent = newVal;
+
+        card.classList.remove('flipping');
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add('flipping');
+
+        setTimeout(() => {
+            cardBottom.textContent = newVal;
+        }, 450);
+    }
+
+    // === РЕНДЕР И ОБНОВЛЕНИЕ ЧАСОВ ===
+    function updateTime() {
+        const now = new Date();
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const secs = String(now.getSeconds()).padStart(2, '0');
+        const currentTimeStr = `${hrs}${mins}${secs}`;
+
+        const isFlipStyle = state.digital.style === '8' || state.digital.style === '9';
+
+        if (isFlipStyle) {
+            if (!digitalClock.querySelector('.flip-card-3d')) {
+                initFlipClockStructure(digitalClock, false);
+                initFlipClockStructure(previewDigitalClock, true);
+            }
+            // Обновление карточек без перезаписи родительского DOM
+            const prefixes = ['main-', 'prev-'];
+            prefixes.forEach(p => {
+                updateSingleFlipCard(p + 'h1', hrs[0]);
+                updateSingleFlipCard(p + 'h2', hrs[1]);
+                updateSingleFlipCard(p + 'm1', mins[0]);
+                updateSingleFlipCard(p + 'm2', mins[1]);
+                updateSingleFlipCard(p + 's1', secs[0]);
+                updateSingleFlipCard(p + 's2', secs[1]);
+            });
+        } else {
+            let timeHtml = '';
+            if (state.digital.style === '2') {
+                timeHtml = `<div class="time-block">${hrs}</div>:<div class="time-block">${mins}</div>:<div class="time-block">${secs}</div>`;
+            } else {
+                timeHtml = `${hrs}:${mins}:${secs}`;
+            }
+            digitalClock.innerHTML = timeHtml;
+            previewDigitalClock.innerHTML = timeHtml;
+        }
+
+        prevTimeStr = currentTimeStr;
+
+        // Аналоговые стрелки
+        updateAnalogHands(now, mainAnalogSvg);
+        updateAnalogHands(now, previewAnalogSvg);
+
+        // Дата
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        const dateStr = now.toLocaleDateString('ru-RU', options);
+        dateDisplay.textContent = dateStr;
+        previewDateDisplay.textContent = dateStr;
+
+        // Вызов функции смещения от выгорания
+        handleBurnInProtection(now);
+    }
+
+    function updateAnalogHands(now, svgEl) {
+        if (!svgEl) return;
+        const hrs = now.getHours() % 12;
+        const mins = now.getMinutes();
+        const secs = now.getSeconds();
+        const ms = now.getMilliseconds();
+
+        const secDeg = ((secs + ms / 1000) / 60) * 360;
+        const minDeg = ((mins + secs / 60) / 60) * 360;
+        const hrDeg = ((hrs + mins / 60) / 12) * 360;
+
+        const hrHand = svgEl.querySelector('.hand-hour');
+        const minHand = svgEl.querySelector('.hand-min');
+        const secHand = svgEl.querySelector('.hand-sec');
+
+        if (hrHand) hrHand.setAttribute('transform', `rotate(${hrDeg} 100 100)`);
+        if (minHand) minHand.setAttribute('transform', `rotate(${minDeg} 100 100)`);
+        if (secHand) secHand.setAttribute('transform', `rotate(${secDeg} 100 100)`);
+
+        const subSecHand = svgEl.querySelector('.sub-hand-sec');
+        if (subSecHand) subSecHand.setAttribute('transform', `rotate(${secDeg} 100 145)`);
+    }
+
+    // Отрисовка SVG для 7 стилей аналоговых часов
+    function drawAnalogDial(svgEl, style, font, color) {
+        if (!svgEl) return;
+        svgEl.innerHTML = '';
+        const ns = "http://www.w3.org/2000/svg";
+
+        const bgCircle = document.createElementNS(ns, 'circle');
+        bgCircle.setAttribute('cx', '100'); bgCircle.setAttribute('cy', '100'); bgCircle.setAttribute('r', '95');
+        bgCircle.setAttribute('fill', 'none');
+        bgCircle.setAttribute('stroke', color);
+        bgCircle.setAttribute('stroke-width', style === '3' || style === '7' ? '5' : '2');
+        bgCircle.setAttribute('opacity', style === '6' ? '0.8' : '0.4');
+        svgEl.appendChild(bgCircle);
+
+        if (style === '6') {
+            for (let g = 20; g < 200; g += 20) {
+                const gridL = document.createElementNS(ns, 'line');
+                gridL.setAttribute('x1', g); gridL.setAttribute('y1', '10');
+                gridL.setAttribute('x2', g); gridL.setAttribute('y2', '190');
+                gridL.setAttribute('stroke', color); gridL.setAttribute('stroke-width', '0.5'); gridL.setAttribute('opacity', '0.15');
+                svgEl.appendChild(gridL);
+            }
+        } else if (style === '4') {
+            const subCircle = document.createElementNS(ns, 'circle');
+            subCircle.setAttribute('cx', '100'); subCircle.setAttribute('cy', '145'); subCircle.setAttribute('r', '22');
+            subCircle.setAttribute('fill', 'none'); subCircle.setAttribute('stroke', color); subCircle.setAttribute('stroke-width', '1');
+            subCircle.setAttribute('opacity', '0.5');
+            svgEl.appendChild(subCircle);
+        }
+
+        const romanNumerals = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+
+        for (let i = 0; i < 12; i++) {
+            const angle = (i * 30) * (Math.PI / 180);
+            const x1 = 100 + 86 * Math.sin(angle);
+            const y1 = 100 - 86 * Math.cos(angle);
+
+            if (style === '1') {
+                const x2 = 100 + 72 * Math.sin(angle);
+                const y2 = 100 - 72 * Math.cos(angle);
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', x2); text.setAttribute('y', y2 + 5);
+                text.setAttribute('fill', color); text.setAttribute('font-family', font);
+                text.setAttribute('font-size', '15'); text.setAttribute('font-weight', 'bold');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = i === 0 ? '12' : String(i);
+                svgEl.appendChild(text);
+            } else if (style === '2') {
+                const x2 = 100 + 75 * Math.sin(angle);
+                const y2 = 100 - 75 * Math.cos(angle);
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', color); line.setAttribute('stroke-width', i % 3 === 0 ? '4' : '1.5');
+                svgEl.appendChild(line);
+            } else if (style === '3') {
+                const x2 = 100 + (i % 3 === 0 ? 68 : 78) * Math.sin(angle);
+                const y2 = 100 - (i % 3 === 0 ? 68 : 78) * Math.cos(angle);
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', color); line.setAttribute('stroke-width', i % 3 === 0 ? '5' : '2');
+                svgEl.appendChild(line);
+            } else if (style === '4') {
+                if (i !== 6) {
+                    const x2 = 100 + 72 * Math.sin(angle);
+                    const y2 = 100 - 72 * Math.cos(angle);
+                    const text = document.createElementNS(ns, 'text');
+                    text.setAttribute('x', x2); text.setAttribute('y', y2 + 5);
+                    text.setAttribute('fill', color); text.setAttribute('font-family', font);
+                    text.setAttribute('font-size', '14'); text.setAttribute('text-anchor', 'middle');
+                    text.textContent = i === 0 ? '12' : String(i);
+                    svgEl.appendChild(text);
+                }
+            } else if (style === '5') {
+                const x2 = 100 + 70 * Math.sin(angle);
+                const y2 = 100 - 70 * Math.cos(angle);
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', x2); text.setAttribute('y', y2 + 5);
+                text.setAttribute('fill', color); text.setAttribute('font-family', font);
+                text.setAttribute('font-size', '14'); text.setAttribute('font-weight', 'bold');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = romanNumerals[i];
+                svgEl.appendChild(text);
+            } else if (style === '6') {
+                const x2 = 100 + 76 * Math.sin(angle);
+                const y2 = 100 - 76 * Math.cos(angle);
+                const dot = document.createElementNS(ns, 'circle');
+                dot.setAttribute('cx', x2); dot.setAttribute('cy', y2);
+                dot.setAttribute('r', i % 3 === 0 ? '4' : '2');
+                dot.setAttribute('fill', color);
+                svgEl.appendChild(dot);
+            } else if (style === '7') {
+                const x2 = 100 + 70 * Math.sin(angle);
+                const y2 = 100 - 70 * Math.cos(angle);
+                if (i % 3 === 0) {
+                    const text = document.createElementNS(ns, 'text');
+                    text.setAttribute('x', x2); text.setAttribute('y', y2 + 6);
+                    text.setAttribute('fill', color); text.setAttribute('font-family', font);
+                    text.setAttribute('font-size', '18'); text.setAttribute('font-weight', '900');
+                    text.setAttribute('text-anchor', 'middle');
+                    text.textContent = i === 0 ? '12' : String(i);
+                    svgEl.appendChild(text);
+                } else {
+                    const line = document.createElementNS(ns, 'line');
+                    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                    line.setAttribute('x2', 100 + 80 * Math.sin(angle)); line.setAttribute('y2', 100 - 80 * Math.cos(angle));
+                    line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
+                    svgEl.appendChild(line);
+                }
+            }
+        }
+
+        const hr = document.createElementNS(ns, 'line');
+        hr.setAttribute('class', 'hand-hour');
+        hr.setAttribute('x1', '100'); hr.setAttribute('y1', '100');
+        hr.setAttribute('x2', '100'); hr.setAttribute('y2', style === '7' ? '60' : '55');
+        hr.setAttribute('stroke', color); hr.setAttribute('stroke-width', style === '5' ? '4' : '6');
+        hr.setAttribute('stroke-linecap', 'round');
+
+        const min = document.createElementNS(ns, 'line');
+        min.setAttribute('class', 'hand-min');
+        min.setAttribute('x1', '100'); min.setAttribute('y1', '100');
+        min.setAttribute('x2', '100'); min.setAttribute('y2', '35');
+        min.setAttribute('stroke', color); min.setAttribute('stroke-width', style === '5' ? '3' : '4');
+        min.setAttribute('stroke-linecap', 'round');
+
+        const sec = document.createElementNS(ns, 'line');
+        sec.setAttribute('class', 'hand-sec');
+        sec.setAttribute('x1', '100'); sec.setAttribute('y1', '110');
+        sec.setAttribute('x2', '100'); sec.setAttribute('y2', '25');
+        sec.setAttribute('stroke', style === '7' ? '#ff9900' : '#ff0055');
+        sec.setAttribute('stroke-width', '2');
+
+        if (style === '4') {
+            const subSec = document.createElementNS(ns, 'line');
+            subSec.setAttribute('class', 'sub-hand-sec');
+            subSec.setAttribute('x1', '100'); subSec.setAttribute('y1', '145');
+            subSec.setAttribute('x2', '100'); subSec.setAttribute('y2', '130');
+            subSec.setAttribute('stroke', color); subSec.setAttribute('stroke-width', '2');
+            svgEl.appendChild(subSec);
+        }
+
+        const centerDot = document.createElementNS(ns, 'circle');
+        centerDot.setAttribute('cx', '100'); centerDot.setAttribute('cy', '100');
+        centerDot.setAttribute('r', '5'); centerDot.setAttribute('fill', color);
+
+        svgEl.appendChild(hr);
+        svgEl.appendChild(min);
+        svgEl.appendChild(sec);
+        svgEl.appendChild(centerDot);
+    }
+
+    // === ЗАЩИТА ОТ ВЫГОРАНИЯ (OLED SHIFT) ===
+    let lastShiftTime = 0;
+    let crossStep = 0;
+
+    function handleBurnInProtection(now) {
+        if (state.burnin.interval === 'off') {
+            document.documentElement.style.setProperty('--shift-x', '0px');
+            document.documentElement.style.setProperty('--shift-y', '0px');
+            burninIndicator.style.display = 'none';
+            return;
+        }
+
+        burninIndicator.style.display = 'flex';
+        const currentTime = now.getTime();
+
+        if (state.burnin.interval === 'continuous') {
+            // Непрерывное плавное вращение по орбите
+            const t = currentTime / 4000;
+            const shiftX = Math.cos(t) * 45;
+            const shiftY = Math.sin(t * 0.8) * 30;
+            document.documentElement.style.setProperty('--shift-x', `${shiftX}px`);
+            document.documentElement.style.setProperty('--shift-y', `${shiftY}px`);
+            return;
+        }
+
+        const intervalMinutes = parseInt(state.burnin.interval, 10);
+        const intervalMs = intervalMinutes * 60 * 1000;
+
+        if (currentTime - lastShiftTime >= intervalMs) {
+            lastShiftTime = currentTime;
+            let shiftX = 0;
+            let shiftY = 0;
+
+            if (state.burnin.mode === 'random') {
+                shiftX = (Math.random() - 0.5) * 120;
+                shiftY = (Math.random() - 0.5) * 80;
+            } else if (state.burnin.mode === 'orbit') {
+                const angle = Math.random() * Math.PI * 2;
+                shiftX = Math.cos(angle) * 50;
+                shiftY = Math.sin(angle) * 40;
+            } else if (state.burnin.mode === 'cross') {
+                const positions = [
+                    {x: 50, y: 35},
+                    {x: -50, y: 35},
+                    {x: -50, y: -35},
+                    {x: 50, y: -35},
+                    {x: 0, y: 0}
+                ];
+                shiftX = positions[crossStep].x;
+                shiftY = positions[crossStep].y;
+                crossStep = (crossStep + 1) % positions.length;
+            } else if (state.burnin.mode === 'pixel') {
+                shiftX = (Math.random() - 0.5) * 20;
+                shiftY = (Math.random() - 0.5) * 20;
+            }
+
+            document.documentElement.style.setProperty('--shift-x', `${shiftX}px`);
+            document.documentElement.style.setProperty('--shift-y', `${shiftY}px`);
+        }
+    }
+
+    // Применение стилей
+    function applyStyles() {
+        document.documentElement.style.setProperty('--clock-scale', state.scale);
+        document.documentElement.style.setProperty('--brightness', state.brightness);
+
+        const digiDisplay = state.mode === 'digital' ? 'flex' : 'none';
+        const analogDisplay = state.mode === 'digital' ? 'none' : 'block';
+
+        digitalClock.style.display = digiDisplay;
+        previewDigitalClock.style.display = digiDisplay;
+        analogClock.style.display = analogDisplay;
+        previewAnalogClock.style.display = analogDisplay;
+
+        // Цифровые часы
+        if (state.digital.style === '8' || state.digital.style === '9') {
+            initFlipClockStructure(digitalClock, false);
+            initFlipClockStructure(previewDigitalClock, true);
+        }
+        digitalClock.className = `digital-clock-element digi-style-${state.digital.style}`;
+        previewDigitalClock.className = `digital-clock-element digi-style-${state.digital.style}`;
+        document.documentElement.style.setProperty('--digital-font', state.digital.font);
+        document.documentElement.style.setProperty('--digital-color', state.digital.color);
+
+        // Аналоговые часы
+        drawAnalogDial(mainAnalogSvg, state.analog.style, state.analog.font, state.analog.color);
+        drawAnalogDial(previewAnalogSvg, state.analog.style, state.analog.font, state.analog.color);
+
+        // Дата
+        clockContainer.className = `clock-layout-box layout-${state.date.position}`;
+        previewClockContainer.className = `clock-layout-box preview-container layout-${state.date.position}`;
+
+        document.documentElement.style.setProperty('--date-font', state.date.font);
+        document.documentElement.style.setProperty('--date-color', state.date.color);
+        document.documentElement.style.setProperty('--date-size', state.date.size);
+
+        updateTime();
+    }
+
+    // === СОБЫТИЯ И ОБРАБОТЧИКИ ===
+    scaleSlider.addEventListener('input', (e) => {
+        state.scale = e.target.value;
+        applyStyles();
+    });
+
+    brightSlider.addEventListener('input', (e) => {
+        state.brightness = e.target.value;
+        applyStyles();
+    });
+
+    btnOrientation.addEventListener('click', () => {
+        state.isLandscape = !state.isLandscape;
+        if (state.isLandscape) {
+            screenContainer.classList.add('rotated-landscape');
+            orientLabel.textContent = 'Ориентация: Альбомная';
+        } else {
+            screenContainer.classList.remove('rotated-landscape');
+            orientLabel.textContent = 'Ориентация: Книжная';
+        }
+    });
+
+    btnSettings.addEventListener('click', () => modal.classList.add('active'));
+    modalCloseBtn.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('active');
+    });
+
+    tabDigital.addEventListener('click', () => {
+        state.mode = 'digital';
+        tabDigital.classList.add('active');
+        tabAnalog.classList.remove('active');
+        sectionDigital.style.display = 'block';
+        sectionAnalog.style.display = 'none';
+        applyStyles();
+    });
+
+    tabAnalog.addEventListener('click', () => {
+        state.mode = 'analog';
+        tabAnalog.classList.add('active');
+        tabDigital.classList.remove('active');
+        sectionAnalog.style.display = 'block';
+        sectionDigital.style.display = 'none';
+        applyStyles();
+    });
+
+    document.getElementById('digi-style-select').addEventListener('change', (e) => {
+        state.digital.style = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('digi-font-select').addEventListener('change', (e) => {
+        state.digital.font = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('digi-color-picker').addEventListener('input', (e) => {
+        state.digital.color = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('analog-style-select').addEventListener('change', (e) => {
+        state.analog.style = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('analog-font-select').addEventListener('change', (e) => {
+        state.analog.font = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('analog-color-picker').addEventListener('input', (e) => {
+        state.analog.color = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('burnin-interval-select').addEventListener('change', (e) => {
+        state.burnin.interval = e.target.value;
+        lastShiftTime = 0; // Сброс таймера при смене режима
+        applyStyles();
+    });
+
+    document.getElementById('burnin-mode-select').addEventListener('change', (e) => {
+        state.burnin.mode = e.target.value;
+        lastShiftTime = 0;
+        applyStyles();
+    });
+
+    document.getElementById('date-pos-select').addEventListener('change', (e) => {
+        state.date.position = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('date-font-select').addEventListener('change', (e) => {
+        state.date.font = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('date-size-select').addEventListener('change', (e) => {
+        state.date.size = e.target.value;
+        applyStyles();
+    });
+
+    document.getElementById('date-color-picker').addEventListener('input', (e) => {
+        state.date.color = e.target.value;
+        applyStyles();
+    });
+
+    // Инициализация
+    applyStyles();
+    setInterval(updateTime, 1000);
+</script>
+
+</body>
+</html>
