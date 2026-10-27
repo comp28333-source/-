@@ -47,6 +47,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NightClock-apk
-          path: my-app/platforms/android/app/build/outputs/apk/debug/NightClock.apk
-
+          name: Night-Clock-apk
+          path: my-app/platforms/android/app/build/outputs/apk/debug/Night-Clock.apk
