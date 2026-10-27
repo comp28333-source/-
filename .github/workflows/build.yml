@@ -1,4 +1,4 @@
-name: Build Android APK
+Name: Build Android APK
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -41,6 +41,9 @@ jobs:
 
           sed -i '/<\/widget>/i \    <preference name="SplashScreen" value="none" />' config.xml
           sed -i '/<\/widget>/i \    <preference name="SplashMaintainScrollPosition" value="true" />' config.xml
+          
+          # Включаем полноэкранный режим
+          sed -i '/<\/widget>/i \    <preference name="Fullscreen" value="true" />' config.xml
 
           cordova build android
 
